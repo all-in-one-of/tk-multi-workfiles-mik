@@ -8,9 +8,9 @@ https://github.com/shotgunsoftware/tk-multi-workfiles
 
 
     wip_skip_fields:
-       type: list
-        description: keys to skip while looking for wips
-        values:
-            type: str
-        allows_empty: True
-        default_value: ["version"]
+        type: list
+            description: keys to skip while looking for wips
+            values:
+                type: str
+            allows_empty: True
+            default_value: ["version"]
