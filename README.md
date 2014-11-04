@@ -4,7 +4,7 @@ https://github.com/shotgunsoftware/tk-multi-workfiles
 
 
 ##Change in settings:
-*added a wip_skip_fields to allow sniffing of multiple wip files through user-name based work folders
++ added a wip_skip_fields to allow sniffing of multiple wip files through user-name based work folders
 
 >    wip_skip_fields:
 >       type: list
