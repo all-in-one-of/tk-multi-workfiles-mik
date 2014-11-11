@@ -984,6 +984,7 @@ class WorkFiles(object):
             self._app.new_temp_context = context
             template = self._app.get_template_from(settings, key)
             templates[key] = template
+            del self._app.new_temp_context
 
         return templates
 
