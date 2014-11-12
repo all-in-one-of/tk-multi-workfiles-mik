@@ -50,8 +50,8 @@ class MultiWorkFiles(tank.platform.Application):
         self._can_change_version = self._can_save_as and ("version" in template_work.keys)
         if self._can_save_as:
             self.engine.register_command("Shotgun Save As...", self.show_save_as_dlg)
-        # if self._can_change_version:
-        #     self.engine.register_command("Version up Current Scene...", self.show_change_version_dlg)
+        if self._can_change_version:
+            self.engine.register_command("Version up Current Scene...", self.show_change_version_dlg)
 
         # process auto startup options - but only on certain supported platforms
         # because of the way QT inits and connects to different host applications
