@@ -62,7 +62,7 @@ configuration:
                      Each entry in the dictionary maps an entity type to a dictionary of 'label:field'
                      name pairs.  For example, to display the name of the sequence that a shot belongs
                      to, specify: {Shot:{Sequence: sg_sequence.Sequence.code}}"
-      default_value: {}
+      default_value: {Shot: {Sequence: sg_sequence.Sequence.code}, Asset: {Type: sg_asset_type}}
 
     sg_task_filters:
         type: list
@@ -79,7 +79,7 @@ configuration:
     allow_task_creation:
         type: bool
         description: Controls whether new tasks can be created from the app.
-        default_value: True
+        default_value: False
 
     launch_change_work_area_at_startup:
         type: bool
@@ -138,7 +138,7 @@ configuration:
       type: str
       description: The default name that gets used by when saving a work file using the
                    save-as command
-      default_value: scene
+      default_value: ''
 
     saveas_prefer_version_up:
       type: bool
@@ -146,7 +146,7 @@ configuration:
                    set to True then the name from the current scene will be used and the version
                    incremented.  If False then a new unique name will be used and the version
                    reset
-      default_value: False
+      default_value: True
 
     task_extra_display_fields:
       type: list
@@ -168,7 +168,7 @@ configuration:
       values:
         type: str
       allows_empty: True
-      default_value: []
+      default_value: [cs_publi_flag]
 
 # the Shotgun fields that this app needs in order to operate correctly
 requires_shotgun_fields:
