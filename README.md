@@ -9,7 +9,7 @@ https://github.com/shotgunsoftware/tk-multi-workfiles
 * changed versionning to keep track of all work files across artists
 
 ## TO-DO, changelog:
-[[TO-DO, changelog|TODO---Changelog]]
+https://github.com/tlhomme/tk-multi-workfiles-mik/wiki/TODO---Changelog
 
 ## Default config:
 ```yaml
