@@ -33,6 +33,15 @@ class Versioning(object):
         handler = Versioning(app)
         handler._show_change_version_dlg()
 
+    @staticmethod
+    def change_version(app):
+        """
+        Help method to show a dialog allowing the user to
+        change the version of the current work file
+        """
+        handler = Versioning(app)
+        handler.auto_change_work_file_version()
+
     def __init__(self, app, work_template=None, publish_template=None, context=None):
         """
         Construction
@@ -60,6 +69,36 @@ class Versioning(object):
         current_fields = self._work_template.get_fields(work_path)
         fields = dict(chain(current_fields.iteritems(), ctx_fields.iteritems()))
         fields["version"] = new_version
+        new_work_file = self._work_template.apply_fields(fields)
+
+        # do save:
+        save_file(self._app, VERSION_UP_FILE_ACTION, self._app.context, new_work_file)
+
+    def auto_change_work_file_version(self):
+        """
+        Change the current work file version without showing the dlg
+
+        :param work_path:    The file path of the work file to change the version of
+        :param new_version:  The new version for the work file
+        """
+        work_path = ""
+        try:
+            work_path = get_current_path(self._app, VERSION_UP_FILE_ACTION, self._app.context)
+        except Exception, e:
+            msg = ("Failed to get the current file path:\n\n"
+                  "%s\n\n"
+                  "Unable to continue!" % e)
+            QtGui.QMessageBox.critical(None, "Change Version Error!", msg)
+            self._app.log_exception("Failed to get the current file path!")
+            return
+        if not "version" in self._work_template.keys:
+            raise TankError("Work template does not contain a version key - unable to change version!")
+
+        # update version and get new path:
+        ctx_fields = self._app.context.as_template_fields(self._work_template)
+        current_fields = self._work_template.get_fields(work_path)
+        fields = dict(chain(current_fields.iteritems(), ctx_fields.iteritems()))
+        fields["version"] = self._get_max_workfile_version(fields)+1
         new_work_file = self._work_template.apply_fields(fields)
 
         # do save:

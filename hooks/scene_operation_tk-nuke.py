@@ -62,8 +62,6 @@ class SceneOperation(Hook):
         if file_path:
             file_path = file_path.replace("/", os.path.sep)
 
-        # check_mikinfo_node(context)
-
         if operation == "current_path":
             # return the current script path
             return nuke.root().name().replace("/", os.path.sep)
@@ -71,6 +69,8 @@ class SceneOperation(Hook):
         elif operation == "open":
             # open the specified script
             nuke.scriptOpen(file_path)
+            self._check_mikinfo_node(context,"",file_path)
+            self._check_write_nodes()
 
             # reset any write node render paths:
             if self._reset_write_node_render_paths():
@@ -91,13 +91,11 @@ class SceneOperation(Hook):
                 # reset all write nodes:
                 self._reset_write_node_render_paths()
 
-                check_mikinfo_node(context,old_path,file_path)
+                self._check_mikinfo_node(context,old_path,file_path)
+                self._check_write_nodes()
 
                 # save script:
                 nuke.scriptSaveAs(file_path, -1)
-
-
-
 
             except Exception, e:
                 # something went wrong so reset to old path:
@@ -149,12 +147,56 @@ class SceneOperation(Hook):
 
         return len(write_nodes) > 0
 
+    def _check_mikinfo_node(self,context,old_path,file_path):
+        '''
+        @summary: check if info node exists, create it not and then update it
+        @param context: current shotgun context
+        '''
+        mikinfo = nuke.toNode("mikInfo")
+        if mikinfo:
+            print "Found mikinfo node .. "
+        else:
+            print "Creating mikinfo node .. "
+            mikinfo = create_mikinfo_node()
+        update_mikinfo_node(context,old_path,file_path)
+
+    def _check_write_nodes(self):
+        '''
+        @summary: check if mikros write nodes existrs otherwise create them
+        '''
+        x , y = None, None
+        mikinfo = nuke.toNode("mikInfo")
+        if mikinfo:
+            x = mikinfo.xpos()
+            y = mikinfo.ypos()
+        deselectAll()
+        wipwrite = nuke.toNode("WriteWIP")
+        if not wipwrite:
+            wipwrite =nuke.createNode("WriteTank",inpanel = False)
+            wipwrite.setName('WriteWIP')
+            wipwrite.knobs()['tk_profile_list'].setValue('Write WIP')
+            wipwrite.setXpos(x+150)
+            wipwrite.setYpos(y)
+            deselectAll()
+
+        defwrite = nuke.toNode("WriteDEF")
+        if not defwrite:
+            defwrite =nuke.createNode("WriteTank",inpanel = False)
+            defwrite.setName('WriteDEF')
+            defwrite.knobs()['tk_profile_list'].setValue('Write DEF')
+            defwrite.setXpos(x+300)
+            defwrite.setYpos(y)
+            deselectAll()
 
 # =======
 #
 # mikinfo
 #
 # =======
+def deselectAll():
+    for node in nuke.allNodes():
+        node['selected'].setValue(0)
+
 def createTextInput(name,value=""):
     '''
     @summary: create a string nuke knob with a name and a value
@@ -167,19 +209,6 @@ def createTextInput(name,value=""):
     new_knob.setValue(value)
     return new_knob
 
-
-def check_mikinfo_node(context,old_path,file_path):
-    '''
-    @summary: check if info node exists, create it not and then update it
-    @param context: current shotgun context
-    '''
-    mikinfo = nuke.toNode("mikInfo")
-    if mikinfo:
-        print "Found mikinfo node .. "
-    else:
-        print "Creating mikinfo node .. "
-        mikinfo = create_mikinfo_node()
-    update_mikinfo_node(context,old_path,file_path)
 
 def create_mikinfo_node():
     '''
@@ -251,9 +280,11 @@ def update_mikinfo_node(context,old_path,file_path):
 
         mikinfo.knobs()["mik-check"].setValue("True")
 
-        mikinfo.knobs()["mik-from"].setValue(old_path)
+        if old_path != "":
+            mikinfo.knobs()["mik-from"].setValue(old_path)
 
-        mikinfo.knobs()["mik-imagePath"].setValue(path)
+        if path != "":
+            mikinfo.knobs()["mik-imagePath"].setValue(path)
 
         mikinfo.knobs()["mik-in"].setValue('-1')
 
