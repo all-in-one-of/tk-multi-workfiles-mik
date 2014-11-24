@@ -154,9 +154,9 @@ class SceneOperation(Hook):
         '''
         mikinfo = nuke.toNode("mikInfo")
         if mikinfo:
-            print "Found mikinfo node .. "
+            self.parent.log_debug("Found mikinfo node .. ")
         else:
-            print "Creating mikinfo node .. "
+            self.parent.log_debug("Creating mikinfo node .. ")
             mikinfo = create_mikinfo_node()
         update_mikinfo_node(context,old_path,file_path)
 
@@ -172,6 +172,7 @@ class SceneOperation(Hook):
         deselectAll()
         wipwrite = nuke.toNode("WriteWIP")
         if not wipwrite:
+            self.parent.log_debug("Creating WriteWIP .. ")
             wipwrite =nuke.createNode("WriteTank",inpanel = False)
             wipwrite.setName('WriteWIP')
             wipwrite.knobs()['tk_profile_list'].setValue('Write WIP')
@@ -181,6 +182,7 @@ class SceneOperation(Hook):
 
         defwrite = nuke.toNode("WriteDEF")
         if not defwrite:
+            self.parent.log_debug("Creating WriteDEF .. ")
             defwrite =nuke.createNode("WriteTank",inpanel = False)
             defwrite.setName('WriteDEF')
             defwrite.knobs()['tk_profile_list'].setValue('Write DEF')
@@ -255,8 +257,6 @@ def update_mikinfo_node(context,old_path,file_path):
     @summary: updates infonode in scene with new values
     @param context: current shotgun context
     '''
-
-    from pprint import pprint
     mikinfo = nuke.toNode("mikInfo")
     if mikinfo:
         tk = tank.sgtk_from_path(context.filesystem_locations[0])
@@ -269,7 +269,6 @@ def update_mikinfo_node(context,old_path,file_path):
         elementType = entity['type'].lower()
         versionPath = os.path.split(file_path)
 
-        pprint(versionPath)
 
         # Applying render template to current field to obtain render path
         nuke_render_wip = tk.templates["nuke_shot_render_mono_dpx"]
@@ -320,7 +319,6 @@ def update_mikinfo_node(context,old_path,file_path):
         name_value = versionPath[1].replace(".nk","")
         if 'version' in fields:
             version_str = '-v%s'%str(fields['version']).zfill(3)
-            pprint(version_str)
             name_value = name_value.replace(version_str,"")
         mikinfo.knobs()["_mik-name"].setValue(name_value)
 
