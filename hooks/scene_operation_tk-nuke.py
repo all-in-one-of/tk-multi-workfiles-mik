@@ -257,8 +257,6 @@ def update_mikinfo_node(context,old_path,file_path):
     @summary: updates infonode in scene with new values
     @param context: current shotgun context
     '''
-
-    from pprint import pprint
     mikinfo = nuke.toNode("mikInfo")
     if mikinfo:
         tk = tank.sgtk_from_path(context.filesystem_locations[0])
@@ -271,7 +269,6 @@ def update_mikinfo_node(context,old_path,file_path):
         elementType = entity['type'].lower()
         versionPath = os.path.split(file_path)
 
-        pprint(versionPath)
 
         # Applying render template to current field to obtain render path
         nuke_render_wip = tk.templates["nuke_shot_render_mono_dpx"]
@@ -322,7 +319,6 @@ def update_mikinfo_node(context,old_path,file_path):
         name_value = versionPath[1].replace(".nk","")
         if 'version' in fields:
             version_str = '-v%s'%str(fields['version']).zfill(3)
-            pprint(version_str)
             name_value = name_value.replace(version_str,"")
         mikinfo.knobs()["_mik-name"].setValue(name_value)
 
