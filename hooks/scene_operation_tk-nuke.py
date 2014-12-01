@@ -359,14 +359,14 @@ def update_mikinfo_node(context,old_path,file_path):
 
         mikinfo.knobs()["_mik-shot"].setValue(shot)
 
-        if 'cs_step_short_name' in fields:
-            mikinfo.knobs()["_mik-step"].setValue(fields['cs_step_short_name'])
-            mikinfo.knobs()["_mik-task"].setValue(fields['cs_step_short_name'])
-
-        if 'name' in fields:
-            mikinfo.knobs()["_mik-variant"].setValue(fields['name'])
-        else:
-            mikinfo.knobs()["_mik-variant"].setValue('')
+        if 'Step' in fields:
+            mikinfo.knobs()["_mik-step"].setValue(fields['Step'])
+            mikinfo.knobs()["_mik-task"].setValue(fields['Step'])
+        if "_mik-variant" in mikinfo.knobs():
+            if 'name' in fields:
+                mikinfo.knobs()["_mik-variant"].setValue(fields['name'])
+            else:
+                mikinfo.knobs()["_mik-variant"].setValue('')
 
         if 'version' in fields:
             mikinfo.knobs()["_mik-version"].setValue('v%s'%str(fields['version']).zfill(3))
