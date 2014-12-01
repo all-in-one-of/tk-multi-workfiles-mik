@@ -324,6 +324,9 @@ class SaveAs(object):
                 msg = "A file with this name already exists.  If you proceed, the existing file will be overwritten."
             elif max_publish_version:
                 msg = "A published version of this file already exists."
+
+        if "cs_publi_flag" in fields:
+            del fields['cs_publi_flag']
         # create the new path
         new_work_path = self._work_template.apply_fields(fields)
 

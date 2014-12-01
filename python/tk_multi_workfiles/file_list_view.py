@@ -89,6 +89,7 @@ class FileListView(browser_widget.BrowserWidget):
                         file list as well as the list of files organised by task.
 
         """
+
         result = {"task_groups":{}, "task_name_order":{}}
 
         handler = data["handler"]
@@ -141,7 +142,6 @@ class FileListView(browser_widget.BrowserWidget):
 
                 for name, details in name_groups.iteritems():
                     files_versions = details["files"]
-
                     # find highest version info:
                     local_versions = [f.version for f in files_versions.values() if f.is_local]
                     if mode == FileFilter.WORKFILES_MODE and not local_versions:

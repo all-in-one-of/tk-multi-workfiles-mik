@@ -85,6 +85,7 @@ class FileFinder(object):
 
             file_key = FileItem.build_file_key(wf_fields, work_template,
                                                self.__version_compare_ignore_fields + ["version"])
+            # self.__app.log_debug("file_key: %s"%file_key)
             if filter_file_key and file_key != filter_file_key:
                 # we can ignore this file completely!
                 continue
@@ -131,16 +132,18 @@ class FileFinder(object):
 
             # add new file item
             file_item = FileItem(work_path, None, True, False, file_details, file_key)
+            # self.__app.log_debug("file_item: %s"%file_item)
             files[(file_key, file_details["version"])] = file_item
 
             if update_name_map:
                 # update name map with name:
                 key_to_name_map[file_key] = file_item.name
-
+        # self.__app.log_debug("files: %s"%files)
         # and add in publish details:
         ctx_fields = context.as_template_fields(work_template)
 
         for published_file in published_files:
+            self.__app.log_debug("published_file: %s"%published_file['path'])
             file_details = {}
 
             # always have a path:
@@ -164,36 +167,48 @@ class FileFinder(object):
             if filter_file_key and file_key != filter_file_key:
                 # we can ignore this file completely!
                 continue
-
+            self.__app.log_debug("key: %s"%file_key)
             # resolve the work path:
 
-            if len(work_template.missing_keys(wp_fields)) == 0:
+            if len(work_template.missing_keys(wp_fields)) == 0 :
                 work_path = work_template.apply_fields(wp_fields)
-                # copy common fields from published_file:
-                #
+            if len(work_template.missing_keys(wp_fields)) == 1 and "cs_user_name" in work_template.missing_keys(wp_fields) :
+                user = published_file['published_by']['id']
+                filters = [['id','is',user]]
+                fields = ["login"]
+                result = self.__app.shotgun.find_one('HumanUser',filters,fields)
+                self.__app.log_debug("result%s"%result)
+                if result:
+                    wp_fields['cs_user_name'] = result['login']
+                    work_path = work_template.apply_fields(wp_fields)
+
+            # self.__app.log_debug("missing: %s"%work_template.missing_keys(wp_fields))
             file_details = dict([(k, v) for k, v in published_file.iteritems() if k != "path"])
 
             # get version from fields if not specified in publish file:
             if file_details["version"] == None:
                 file_details["version"] = publish_fields.get("version", 0)
-
+            # self.__app.log_debug("file_details: %s"%file_details)
             # look to see if we have a matching work file for this published file
             have_work_file = False
             existing_file_item = files.get((file_key, file_details["version"]))
+            self.__app.log_debug("existing_file_item: %s"%existing_file_item)
+            #LOOK HERE IF FILE MISSING FROM WORK LISTING
+            if existing_file_item and existing_file_item.is_local :
+                if "cs_user_name" not in work_template.missing_keys(wp_fields) and len(work_template.missing_keys(wp_fields))>0:
+                    # we do so check the paths match:
+                    if existing_file_item.path != work_path:
+                        test_publi = existing_file_item.path.replace('-publi','')
+                        if test_publi != work_path:
+                            raise TankError("Work file mismatch when finding files!")
+                else:
+                    if existing_file_item.path == work_path:
+                        # and copy the work file details - giving precedence to the published details:
+                        file_details = dict([(k,v)
+                                             for k, v in chain(existing_file_item.details.iteritems(), file_details.iteritems())
+                                                if v != None])
 
-            if existing_file_item and existing_file_item.is_local and len(work_template.missing_keys(wp_fields)) == 0:
-                # we do so check the paths match:
-                if existing_file_item.path != work_path:
-                    test_publi = existing_file_item.path.replace('-publi','')
-                    if test_publi != work_path:
-                        raise TankError("Work file mismatch when finding files!")
-
-                # and copy the work file details - giving precedence to the published details:
-                file_details = dict([(k,v)
-                                     for k, v in chain(existing_file_item.details.iteritems(), file_details.iteritems())
-                                        if v != None])
-
-                have_work_file = True
+                        have_work_file = True
             else:
                 # no work file so just use publish details:
 
@@ -326,8 +341,9 @@ class FileFinder(object):
                                                               work_fields,
                                                               self.__version_compare_ignore_fields + ["version"],
                                                               skip_missing_optional_keys=True)
+            # self.__app.log_debug("%s"%work_file_paths)
         except Exception, e:
-            pprint(e)
+            self.__app.log_error(e)
         # build list of work files to send to the filter_work_files hook:
         hook_work_files = [{"work_file":{"path":path}} for path in work_file_paths]
 
@@ -366,7 +382,7 @@ class FileFinder(object):
 
             work_files.append(file_details)
 
-
+        # self.__app.log_debug("%s"%work_files)
         return work_files
 
     def __ignore_file_path(self, path):

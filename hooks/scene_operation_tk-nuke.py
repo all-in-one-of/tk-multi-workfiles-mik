@@ -25,6 +25,17 @@ class SceneOperation(Hook):
     """
 
     def execute(self, operation, file_path, context, parent_action, file_version, read_only, **kwargs):
+        '''
+        @summary:
+        @param operation:
+        @param file_path:
+        @param context:
+        @param parent_action:
+        @param file_version:
+        @param read_only:
+        @param **kwargs:
+        @result:
+        '''
         """
         Main hook entry point
 
@@ -58,7 +69,7 @@ class SceneOperation(Hook):
                                                  state, otherwise False
                                 all others     - None
         """
-
+        self.parent.log_debug("Operation: %s"%operation)
         if file_path:
             file_path = file_path.replace("/", os.path.sep)
 
@@ -125,6 +136,13 @@ class SceneOperation(Hook):
 
             return True
 
+        elif operation == "prepare_new":
+            """
+            Create proper mikinfo node and write nodes
+            """
+            self._check_mikinfo_node(context,"",file_path, create_only=True)
+            self._check_write_nodes()
+
     def _reset_write_node_render_paths(self):
         """
         Use the tk-nuke-writenode app interface to find and reset
@@ -147,18 +165,20 @@ class SceneOperation(Hook):
 
         return len(write_nodes) > 0
 
-    def _check_mikinfo_node(self,context,old_path,file_path):
+    def _check_mikinfo_node(self,context,old_path,file_path, create_only=False):
         '''
         @summary: check if info node exists, create it not and then update it
         @param context: current shotgun context
         '''
+        deselectAll()
         mikinfo = nuke.toNode("mikInfo")
         if mikinfo:
             self.parent.log_debug("Found mikinfo node .. ")
         else:
             self.parent.log_debug("Creating mikinfo node .. ")
             mikinfo = create_mikinfo_node()
-        update_mikinfo_node(context,old_path,file_path)
+        if create_only is False:
+            update_mikinfo_node(context,old_path,file_path)
 
     def _check_write_nodes(self):
         '''
