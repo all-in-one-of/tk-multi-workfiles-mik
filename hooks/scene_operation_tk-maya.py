@@ -66,8 +66,8 @@ class SceneOperation(Hook):
             # the scene it currently has open!
             cmds.file(new=True, force=True)
             cmds.file(file_path, open=True)
-            self._check_mikinfo_node(context,"",file_path)
         elif operation == "save":
+            self._check_mikinfo_node(context,"",file_path)
             # save the current scene:
             cmds.file(save=True)
         elif operation == "save_as":
@@ -99,7 +99,7 @@ class SceneOperation(Hook):
             while cmds.file(query=True, modified=True):
                 # changes have been made to the scene
                 res = QtGui.QMessageBox.question(None,
-                                                 "Save your scene?",
+                                                 "Save your scenfile_pathe?",
                                                  "Your scene has unsaved changes. Save before proceeding?",
                                                  QtGui.QMessageBox.Yes|QtGui.QMessageBox.No|QtGui.QMessageBox.Cancel)
 
@@ -148,22 +148,28 @@ class SceneOperation(Hook):
         tk = tank.sgtk_from_path(context.filesystem_locations[0])
         template = tk.template_from_path(file_path)
         fields = template.get_fields(file_path)
-        sg = self.parent.engine.shotgun
+        # log fields
+        self.parent.log_debug(fields)
 
         entity = context.entity
+        # log entity
+        self.parent.log_debug(entity)
+
         user = context.user
         creation_time = datetime.datetime.now().strftime("%Y%m%d-%H%M")
         shot = entity['name']
         elementType = entity['type'].lower()
         versionPath = os.path.split(file_path)
-
-        filters = [[ "id", "is", entity['id'] ]]
         asset_type = ""
         if elementType == "asset":
-            field = ["sg_asset_type"]
-            result = sg.find(entity['type'], filters, field)
-            if len(result)>0:
-                asset_type = result[0]["sg_asset_type"]
+        	asset_type = fields['cs_asset_type']
+
+        #FIND CURRENT TASK
+        sg = self.parent.engine.shotgun
+        filters = [[ "sg_vfx_codes", "is", fields['cs_task_name']],
+        ["entity","is",entity]]
+        extra_fields = ["content"]
+        result = sg.find('Task', filters,extra_fields)
 
         # Applying render template to current field to obtain render path
         maya_wip = ""
@@ -172,63 +178,70 @@ class SceneOperation(Hook):
         if elementType == "shot":
             maya_wip = tk.templates["maya_shot_render_mono_exr"]
 
+        # check
+        cmds.setAttr("mikInfo.check","False",type="string")
+        # from
         path = maya_wip.apply_fields(fields)
-        cmds.setAttr("mikInfo.check","True",type="string")
-
         if old_path != "":
             cmds.setAttr("mikInfo.from",old_path,type="string")
-
+        # path
         if path != "":
             cmds.setAttr("mikInfo.imagePath",path,type="string")
-
+        # modifDate
         cmds.setAttr("mikInfo.modifDate",creation_time,type="string")
+        # nodeName
         cmds.setAttr("mikInfo.nodeName",'mikInfo',type="string")
+        # path
         cmds.setAttr("mikInfo.path",file_path,type="string")
+        # versionPath
         cmds.setAttr("mikInfo.versionPath",versionPath[0],type="string")
-        cmds.setAttr("mikInfo.elementType",elementType,type="string")
-        cmds.setAttr("mikInfo.department","maya",type="string")
-
+        # elementType
+        cmds.setAttr("mikInfo._elementType",elementType,type="string")
+        # _department
+        cmds.setAttr("mikInfo._department","maya",type="string")
+        # location
         if "wip" in versionPath[0]:
-            cmds.setAttr("mikInfo.location",'wip',type="string")
+            cmds.setAttr("mikInfo._location",'wip',type="string")
         else:
-            cmds.setAttr("mikInfo.location",'publi',type="string")
-
+            cmds.setAttr("mikInfo._location",'publi',type="string")
+        # name
         name_value = versionPath[1].replace(".ma","")
         if 'version' in fields:
             version_str = '-v%s'%str(fields['version']).zfill(3)
             name_value = name_value.replace(version_str,"")
-        cmds.setAttr("mikInfo.name",name_value,type="string")
-
+        cmds.setAttr("mikInfo._name",name_value,type="string")
+        # publi_flag
         if 'cs_publi_flag' in fields:
-            cmds.setAttr("mikInfo.publishTag",'True',type="string")
+            cmds.setAttr("mikInfo._publishTag",'True',type="string")
         else:
-            cmds.setAttr("mikInfo.publishTag",'False',type="string")
-
+            cmds.setAttr("mikInfo._publishTag",'',type="string")
+        # user_name
         if "cs_user_name" in fields:
-            cmds.setAttr("mikInfo.savedBy",fields['cs_user_name'],type="string")
-
-        if 'cs_step_short_name' in fields:
-            cmds.setAttr("mikInfo.step",'maya',type="string")
-            cmds.setAttr("mikInfo.task",fields['cs_step_short_name'],type="string")
+            cmds.setAttr("mikInfo._savedBy",fields['cs_user_name'],type="string")
+        # step
+        cmds.setAttr("mikInfo._task",'maya',type="string")
+        # task
+        if len(result)>0:
+            cmds.setAttr("mikInfo._step",result[0]['content'],type="string")
 
         if 'name' in fields:
-            cmds.setAttr("mikInfo.variant",fields['name'],type="string")
+            cmds.setAttr("mikInfo._variant",fields['name'],type="string")
         else:
-            cmds.setAttr("mikInfo.variant",'',type="string")
+            cmds.setAttr("mikInfo._variant",'',type="string")
 
         if 'version' in fields:
-            cmds.setAttr("mikInfo.version",'v%s'%str(fields['version']).zfill(3),type="string")
+            cmds.setAttr("mikInfo._version",'v%s'%str(fields['version']).zfill(3),type="string")
 
         if elementType == "shot":
             if "Sequence" in fields:
-                cmds.setAttr("mikInfo.seq",fields['Sequence'],type="string")
+                cmds.setAttr("mikInfo._seq",fields['Sequence'],type="string")
             if "Shot" in fields:
-                cmds.setAttr("mikInfo.shot",shot,type="string")
-            cmds.setAttr("mikInfo.in",'-1',type="string")
-            cmds.setAttr("mikInfo.out",'-1',type="string")
+                cmds.setAttr("mikInfo._shot",shot,type="string")
+            cmds.setAttr("mikInfo._in",'-1',type="string")
+            cmds.setAttr("mikInfo._out",'-1',type="string")
         if elementType == "asset":
-            cmds.setAttr("mikInfo.type",asset_type,type="string")
-            cmds.setAttr("mikInfo.asset",fields['Asset'],type="string")
+            cmds.setAttr("mikInfo._type",asset_type,type="string")
+            cmds.setAttr("mikInfo._asset",fields['Asset'],type="string")
 
 # =======
 #
@@ -264,23 +277,23 @@ def create_mikinfo_node(context):
     createTextInput("nodeName")
     createTextInput("path")
     createTextInput("versionPath")
-    createTextInput("comment")
-    createTextInput("department")
-    createTextInput("elementType")
-    createTextInput("location")
-    createTextInput("name")
-    createTextInput("publishTag")
-    createTextInput("savedBy")
-    createTextInput("step")
-    createTextInput("task")
-    createTextInput("variant")
-    createTextInput("version")
+    createTextInput("_comment")
+    createTextInput("_department")
+    createTextInput("_elementType")
+    createTextInput("_location")
+    createTextInput("_name")
+    createTextInput("_publishTag")
+    createTextInput("_savedBy")
+    createTextInput("_step")
+    createTextInput("_task")
+    createTextInput("_variant")
+    createTextInput("_version")
     if elementType == "asset":
-        createTextInput("asset")
-        createTextInput("type")
+        createTextInput("_asset")
+        createTextInput("_type")
     if elementType == "shot":
-        createTextInput("in")
-        createTextInput("out")
-        createTextInput("seq")
-        createTextInput("shot")
+        createTextInput("_in")
+        createTextInput("_out")
+        createTextInput("_seq")
+        createTextInput("_shot")
 

@@ -119,6 +119,7 @@ class WorkFiles(object):
                 # create a context for the specific filter user:
                 find_ctx = self._context.create_copy_for_user(filter_user)
         finder = FileFinder(self._app, self._user_cache)
+        # self._app.log_debug("find_ctx: %s"%find_ctx)
         return finder.find_files(self._work_template, self._publish_template, find_ctx)
 
     def _on_show_in_file_system(self):

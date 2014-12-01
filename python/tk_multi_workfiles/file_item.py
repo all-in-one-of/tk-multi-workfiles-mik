@@ -15,19 +15,19 @@ class FileItem(object):
     """
     Encapsulate details about a work file
     """
-    
+
     @staticmethod
     def build_file_key(fields, template, ignore_fields = None):
         """
         Build a unique key from the specified fields and template.  This will be
         used to determine if multiple files are actually versions of the same
         file.
-        
+
         :param fields:          A dictionary of fields extracted from a file path
-        :param template:        The template that represents the files this key will be 
+        :param template:        The template that represents the files this key will be
                                 used to compare.
         :param ignore_fields:   A list of fields to ignore when constructing the key.
-                                Typically this will contain at least 'version' but it 
+                                Typically this will contain at least 'version' but it
                                 may also contain other fields (e.g. user initials in
                                 the file name).
         :returns:               An immutable 'key' that can be used for comparison and
@@ -44,11 +44,11 @@ class FileItem(object):
             if name in ignore_fields:
                 continue
             file_key[name] = value
-        
+
         # return a string representation of the sorted dictionary:
         # e.g. "[('name', 'foo'), ('sequence', 'Sequence01'), ('shot', 'shot_010')]"
         return str(sorted(file_key.iteritems()))
-    
+
     def __init__(self, path, publish_path, is_local, is_published, details, key):
         """
         Construction
@@ -69,26 +69,26 @@ class FileItem(object):
     @property
     def details(self):
         return self._details
-    
+
     @property
     def name(self):
         n = self._details.get("name")
         if not n and self._path:
             n = os.path.basename(self._path)
         return n
-        
+
     @property
     def version(self):
         return self._details.get("version")
-    
+
     @property
     def entity(self):
         return self._details.get("entity")
-    
+
     @property
     def task(self):
         return self._details.get("task")
-    
+
     @property
     def thumbnail(self):
         return self._details.get("thumbnail")
@@ -104,11 +104,11 @@ class FileItem(object):
     @property
     def is_local(self):
         return self._is_local
-    
+
     @property
     def path(self):
         return self._path
-    
+
     @property
     def modified_at(self):
         return self._details.get("modified_at")
@@ -116,37 +116,37 @@ class FileItem(object):
     @property
     def modified_by(self):
         return self._details.get("modified_by")
-    
+
     @property
     def editable(self):
         return self._details.get("editable", True)
-    
+
     @property
     def not_editable_reason(self):
         """
         Return the reason the file is not editable.
         """
         return self._details.get("editable_reason") or ""
-    
+
     """
     Published file details
     """
     @property
     def is_published(self):
         return self._is_published
-    
+
     @property
     def publish_path(self):
         return self._publish_path
-        
+
     @property
     def published_file_id(self):
         return self._details.get("published_file_id")
-    
+
     @property
     def publish_description(self):
         return self._details.get("publish_description")
-    
+
     @property
     def published_at(self):
         return self._details.get("published_at")
@@ -154,7 +154,7 @@ class FileItem(object):
     @property
     def published_by(self):
         return self._details.get("published_by")
-    
+
     def format_published_by_details(self):
         """
         Format the publish details as a string to
@@ -210,19 +210,19 @@ class FileItem(object):
             return ("%s" % self.publish_description)
         else:
             return "<i>No description was entered for this publish</i>"
-    
+
     def compare_with_publish(self, published_file):
         """
         Determine if this (local) file is more recent than
         the specified published file
-        
+
         :returns:    -1 if work file is older than publish
                       0 if work file is exactly the same time as publish
                       1 if work file is more recent than publish
         """
         if not self.is_local or not published_file.is_published:
             return -1
-        
+
         if self.version > published_file.version:
             return 1
         elif self.version < published_file.version:
@@ -235,9 +235,9 @@ class FileItem(object):
                 # use fuzzy compare when files have different paths - note that this will never
                 # return '0' as the files could still have different contents - in this case, the
                 # work file is favoured over the publish!
-                local_is_latest = False                
+                local_is_latest = False
                 if self.modified_at and published_file.published_at:
-                    # check file modification time - we only consider a local version to be 'latest' 
+                    # check file modification time - we only consider a local version to be 'latest'
                     # if it has a more recent modification time than the published file (with 2mins
                     # tollerance)
                     if self.modified_at > published_file.published_at:
@@ -250,10 +250,10 @@ class FileItem(object):
                     # can't compare times so assume local is more recent than publish:
                     local_is_latest = True
                 return 1 if local_is_latest else 0
-    
+
     def _format_modified_date_time_str(self, date_time):
         """
-        
+
         """
         modified_date = date_time.date()
         date_str = ""
@@ -263,15 +263,15 @@ class FileItem(object):
         elif time_diff < timedelta(days=2):
             date_str = "Yesterday"
         else:
-            date_str = "on %d%s %s" % (modified_date.day, 
-                                    self._day_suffix(modified_date.day), 
+            date_str = "on %d%s %s" % (modified_date.day,
+                                    self._day_suffix(modified_date.day),
                                     modified_date.strftime("%B %Y"))
 
-        modified_time = date_time.time()                
-        date_str += (" at %d:%02d%s" % (modified_time.hour % 12, modified_time.minute, 
+        modified_time = date_time.time()
+        date_str += (" at %d:%02d%s" % (modified_time.hour % 12, modified_time.minute,
                                         "pm" if modified_time.hour > 12 else "am"))
         return date_str
-    
+
     def _day_suffix(self, day):
         """
         Return the suffix for the day of the month
@@ -300,4 +300,4 @@ class FileItem(object):
 
 
 
-    
+
