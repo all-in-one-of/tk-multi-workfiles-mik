@@ -35,6 +35,8 @@ class SaveAsForm(QtGui.QWidget):
         """
         QtGui.QWidget.__init__(self, parent)
 
+        self._exit_code = QtGui.QDialog.Rejected
+
         self._preview_updater = preview_updater
         if self._preview_updater:
             self._preview_updater.work_done.connect(self._preview_info_updated)
@@ -207,5 +209,4 @@ class SaveAsForm(QtGui.QWidget):
         # else:
         #     self._ui.reset_version_cb.setEnabled(False)
         #     self._ui.reset_version_cb.setChecked(False)
-
-
+        

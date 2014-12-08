@@ -16,6 +16,17 @@ import tank
 from tank import Hook
 from tank import TankError
 from tank.platform.qt import QtGui
+import sys
+
+LINUX_PATH = "/s/apps/common/python/luigi/infonodelib"
+WINDOWS_PATH = "V:\\apps\\common\\python\\luigi\\infonodelib"
+info_lib_path = {"linux2": LINUX_PATH,
+              "win32":  WINDOWS_PATH,
+              "darwin": "" }
+
+sys.path.append(info_lib_path[sys.platform])
+
+from infonodelib import InfoNodeLib
 
 class SceneOperation(Hook):
     """
@@ -57,7 +68,7 @@ class SceneOperation(Hook):
                                                  state, otherwise False
                                 all others     - None
         """
-
+        self.infoNodeLib = InfoNodeLib(self.parent)
         if operation == "current_path":
             # return the current scene path
             return cmds.file(query=True, sceneName=True)
@@ -135,165 +146,8 @@ class SceneOperation(Hook):
             self.parent.log_debug("Found mikinfo node .. ")
         else:
             self.parent.log_debug("Creating mikinfo node .. ")
-            create_mikinfo_node(context)
-        self._update_mikinfo_node(context,old_path,file_path)
+            self.infoNodeLib.maya_create_mikinfo_node(context)
+        self.infoNodeLib.maya_update_mikinfo_node(context,old_path,file_path)
+        self.infoNodeLib.maya_check_info_node()
 
-    def _update_mikinfo_node(self,context,old_path,file_path):
-        '''
-        @summary: updates infonode in scene with new values
-        @param context: current shotgun context
-        '''
-        mikinfo = cmds.select("mikInfo")
-
-        tk = tank.sgtk_from_path(context.filesystem_locations[0])
-        template = tk.template_from_path(file_path)
-        fields = template.get_fields(file_path)
-        # log fields
-        self.parent.log_debug(fields)
-
-        entity = context.entity
-        # log entity
-        self.parent.log_debug(entity)
-
-        user = context.user
-        creation_time = datetime.datetime.now().strftime("%Y%m%d-%H%M")
-        shot = entity['name']
-        elementType = entity['type'].lower()
-        versionPath = os.path.split(file_path)
-        asset_type = ""
-        if elementType == "asset":
-        	asset_type = fields['cs_asset_type']
-
-        #FIND CURRENT TASK
-        sg = self.parent.engine.shotgun
-        filters = [[ "sg_vfx_codes", "is", fields['cs_task_name']],
-        ["entity","is",entity]]
-        extra_fields = ["content"]
-        result = sg.find('Task', filters,extra_fields)
-
-        # Applying render template to current field to obtain render path
-        maya_wip = ""
-        if elementType == "asset":
-            maya_wip = tk.templates["maya_asset_render_mono_exr"]
-        if elementType == "shot":
-            maya_wip = tk.templates["maya_shot_render_mono_exr"]
-
-        # check
-        cmds.setAttr("mikInfo.check","False",type="string")
-        # from
-        path = maya_wip.apply_fields(fields)
-        if old_path != "":
-            cmds.setAttr("mikInfo.from",old_path,type="string")
-        # path
-        if path != "":
-            cmds.setAttr("mikInfo.imagePath",path,type="string")
-        # modifDate
-        cmds.setAttr("mikInfo.modifDate",creation_time,type="string")
-        # nodeName
-        cmds.setAttr("mikInfo.nodeName",'mikInfo',type="string")
-        # path
-        cmds.setAttr("mikInfo.path",file_path,type="string")
-        # versionPath
-        cmds.setAttr("mikInfo.versionPath",versionPath[0],type="string")
-        # elementType
-        cmds.setAttr("mikInfo._elementType",elementType,type="string")
-        # _department
-        cmds.setAttr("mikInfo._department","maya",type="string")
-        # location
-        if "wip" in versionPath[0]:
-            cmds.setAttr("mikInfo._location",'wip',type="string")
-        else:
-            cmds.setAttr("mikInfo._location",'publi',type="string")
-        # name
-        name_value = versionPath[1].replace(".ma","")
-        if 'version' in fields:
-            version_str = '-v%s'%str(fields['version']).zfill(3)
-            name_value = name_value.replace(version_str,"")
-        cmds.setAttr("mikInfo._name",name_value,type="string")
-        # publi_flag
-        if 'cs_publi_flag' in fields:
-            cmds.setAttr("mikInfo._publishTag",'True',type="string")
-        else:
-            cmds.setAttr("mikInfo._publishTag",'',type="string")
-        # user_name
-        if "cs_user_name" in fields:
-            cmds.setAttr("mikInfo._savedBy",fields['cs_user_name'],type="string")
-        # step
-        cmds.setAttr("mikInfo._task",'maya',type="string")
-        # task
-        if len(result)>0:
-            cmds.setAttr("mikInfo._step",result[0]['content'],type="string")
-
-        if 'name' in fields:
-            cmds.setAttr("mikInfo._variant",fields['name'],type="string")
-        else:
-            cmds.setAttr("mikInfo._variant",'',type="string")
-
-        if 'version' in fields:
-            cmds.setAttr("mikInfo._version",'v%s'%str(fields['version']).zfill(3),type="string")
-
-        if elementType == "shot":
-            if "Sequence" in fields:
-                cmds.setAttr("mikInfo._seq",fields['Sequence'],type="string")
-            if "Shot" in fields:
-                cmds.setAttr("mikInfo._shot",shot,type="string")
-            cmds.setAttr("mikInfo._in",'-1',type="string")
-            cmds.setAttr("mikInfo._out",'-1',type="string")
-        if elementType == "asset":
-            cmds.setAttr("mikInfo._type",asset_type,type="string")
-            cmds.setAttr("mikInfo._asset",fields['Asset'],type="string")
-
-# =======
-#
-# mikinfo
-#
-# =======
-
-def createTextInput(name,value=""):
-    '''
-    @summary: create a string nuke knob with a name and a value
-    @param name: knob name
-    @param value: knob value
-    @result: the new knob
-    '''
-    cmds.addAttr(longName=name,dt="string")
-
-
-def create_mikinfo_node(context):
-    '''
-    @summary: create infonode with empty values
-    @result: the infonode
-    '''
-    # create mikinfo node
-    mikinfo = cmds.createNode("container",n="mikInfo")
-    entity = context.entity
-    elementType = entity['type'].lower()
-
-    # add proper knobs
-    createTextInput("check")
-    createTextInput("from")
-    createTextInput("imagePath")
-    createTextInput("modifDate")
-    createTextInput("nodeName")
-    createTextInput("path")
-    createTextInput("versionPath")
-    createTextInput("_comment")
-    createTextInput("_department")
-    createTextInput("_elementType")
-    createTextInput("_location")
-    createTextInput("_name")
-    createTextInput("_publishTag")
-    createTextInput("_savedBy")
-    createTextInput("_step")
-    createTextInput("_task")
-    createTextInput("_variant")
-    createTextInput("_version")
-    if elementType == "asset":
-        createTextInput("_asset")
-        createTextInput("_type")
-    if elementType == "shot":
-        createTextInput("_in")
-        createTextInput("_out")
-        createTextInput("_seq")
-        createTextInput("_shot")
 

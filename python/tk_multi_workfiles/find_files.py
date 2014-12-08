@@ -36,6 +36,7 @@ class FileFinder(object):
         self.__app = app
         self.__app.log_debug("__________FileFinder instance__________")
         self.__user_cache = user_cache or UserCache(app)
+        self.__custom_user_cache = {}
         # cache the valid file extensions that can be found
         self.__visible_file_extensions = [".%s" % ext if not ext.startswith(".") else ext
                                           for ext in self.__app.get_setting("file_extensions", [])]
@@ -143,7 +144,7 @@ class FileFinder(object):
         ctx_fields = context.as_template_fields(work_template)
 
         for published_file in published_files:
-            self.__app.log_debug("published_file: %s"%published_file['path'])
+            # self.__app.log_debug("published_file: %s"%published_file['path'])
             file_details = {}
 
             # always have a path:
@@ -167,7 +168,7 @@ class FileFinder(object):
             if filter_file_key and file_key != filter_file_key:
                 # we can ignore this file completely!
                 continue
-            self.__app.log_debug("key: %s"%file_key)
+            # self.__app.log_debug("key: %s"%file_key)
             # resolve the work path:
 
             if len(work_template.missing_keys(wp_fields)) == 0 :
@@ -176,10 +177,16 @@ class FileFinder(object):
                 user = published_file['published_by']['id']
                 filters = [['id','is',user]]
                 fields = ["login"]
-                result = self.__app.shotgun.find_one('HumanUser',filters,fields)
-                self.__app.log_debug("result%s"%result)
-                if result:
-                    wp_fields['cs_user_name'] = result['login']
+                # self.__app.log_debug(self.__custom_user_cache.keys())
+                if user not in self.__custom_user_cache.keys():
+                    result = self.__app.shotgun.find_one('HumanUser',filters,fields)
+                # self.__app.log_debug("result%s"%result)
+                    if result:
+                        wp_fields['cs_user_name'] = result['login']
+                        self.__custom_user_cache[user]=result['login']
+                        work_path = work_template.apply_fields(wp_fields)
+                else:
+                    wp_fields['cs_user_name'] = self.__custom_user_cache[user]
                     work_path = work_template.apply_fields(wp_fields)
 
             # self.__app.log_debug("missing: %s"%work_template.missing_keys(wp_fields))
@@ -192,7 +199,7 @@ class FileFinder(object):
             # look to see if we have a matching work file for this published file
             have_work_file = False
             existing_file_item = files.get((file_key, file_details["version"]))
-            self.__app.log_debug("existing_file_item: %s"%existing_file_item)
+            # self.__app.log_debug("existing_file_item: %s"%existing_file_item)
             #LOOK HERE IF FILE MISSING FROM WORK LISTING
             if existing_file_item and existing_file_item.is_local :
                 if "cs_user_name" not in work_template.missing_keys(wp_fields) and len(work_template.missing_keys(wp_fields))>0:
