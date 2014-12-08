@@ -207,5 +207,4 @@ class SaveAsForm(QtGui.QWidget):
         # else:
         #     self._ui.reset_version_cb.setEnabled(False)
         #     self._ui.reset_version_cb.setChecked(False)
-
-
+        
