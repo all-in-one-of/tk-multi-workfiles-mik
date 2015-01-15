@@ -341,7 +341,10 @@ class FileListView(browser_widget.BrowserWidget):
 
                     for v in wf_versions[:20]:
                         f = files[v]
-                        msg = ("v%03d" % f.version)
+                        mod_date_obj= f.modified_at
+                        mod_date = mod_date_obj.strftime("%Y-%m-%d")
+                        mod_time = mod_date_obj.strftime("%H:%M")
+                        msg = ("v%03d : modified on the %s at %s" % (f.version,mod_date,mod_time))
                         action = QtGui.QAction(msg, wf_sm)
                         # see above for explanation of [()] syntax in action.triggered[()].connect...
                         action.triggered[()].connect(lambda f=f: self._on_open_workfile_action_triggered(f))
