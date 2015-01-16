@@ -83,6 +83,7 @@ class SceneOperation(Hook):
         """
         self.infoNodeLib = InfoNodeLib(self.parent)
         self.parent.log_debug("Operation: %s"%operation)
+
         if file_path:
             file_path = file_path.replace("/", os.path.sep)
 
@@ -118,6 +119,7 @@ class SceneOperation(Hook):
                 self.infoNodeLib.nuke_check_mikinfo_node(context,old_path,file_path)
                 self.infoNodeLib.nuke_check_write_nodes()
 
+                
                 # save script:
                 nuke.scriptSaveAs(file_path, -1)
 
@@ -156,6 +158,9 @@ class SceneOperation(Hook):
             self.infoNodeLib.nuke_check_mikinfo_node(context,"",file_path, create_only=True)
             self.infoNodeLib.nuke_check_write_nodes()
 
+        if file_path:
+            self.set_pf_settings(file_path)
+
     def _reset_write_node_render_paths(self):
         """
         Use the tk-nuke-writenode app interface to find and reset
@@ -178,4 +183,59 @@ class SceneOperation(Hook):
 
         return len(write_nodes) > 0
 
+    def set_pf_settings(self,file_path):
+        self.parent.log_debug("Settings pj settings")
+        sg = self.parent.shotgun
+        self.parent.log_debug(sg)
+        tk = self.parent.sgtk
+        self.parent.log_debug(tk)
+        ctx = tk.context_from_path(file_path)
+        self.parent.log_debug(ctx)
+        if ctx.project:
+            pj_id = ctx.project.get("id")
+            fields = ["sg_frame_rate","sg_color_space"]
+            filters = [['id','is',pj_id]]
+            result = sg.find_one("Project", filters, fields)
+            self.set_frame_rate(result)
+            self.set_writes_colorspace(result)
 
+    def _update_frame_range_form_shotgun(self):
+        """
+        Use the tk-nuke-writenode app interface to find and reset
+        the render path of any Tank write nodes in the current script
+        """
+        write_node_app = self.parent.engine.apps.get("tk-nuke-writenode")
+        if not write_node_app:
+            return False
+
+        # only need to forceably reset the write node render paths if the app version
+        # is less than or equal to v0.1.11
+        from distutils.version import LooseVersion
+        if (write_node_app.version == "Undefined"
+            or LooseVersion(write_node_app.version) > LooseVersion("v0.1.11")):
+            return False
+
+        write_nodes = write_node_app.get_write_nodes()
+        for write_node in write_nodes:
+            write_node_app.reset_node_render_path(write_node)
+
+        return len(write_nodes) > 0
+
+    def set_frame_rate(self,result):
+        if "sg_frame_rate" in result:
+            self.parent.log_debug("Settings frame rate")
+            new_rate =float( result.get("sg_frame_rate"))
+            nuke.root().knobs()['fps'].setValue(new_rate)
+
+    def set_writes_colorspace(self,result):
+        if "sg_color_space" in result:
+            colorspace = result.get("sg_color_space")
+            for node in nuke.allNodes('WriteTank'):
+                if  "DEF" in node.name():
+                    print "switching", node.name(), "to %s"%colorspace
+                    node.knobs()['tk_profile_list'].setValue('Write WIP')
+                    node.knobs()['tk_profile_list'].setValue('Write DEF')
+                if  "WIP" in node.name():
+                    print "switching", node.name(), "to %s"%colorspace
+                    node.knobs()['tk_profile_list'].setValue('Write DEF')
+                    node.knobs()['tk_profile_list'].setValue('Write WIP')
